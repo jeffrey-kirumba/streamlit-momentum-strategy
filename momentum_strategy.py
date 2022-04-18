@@ -52,58 +52,60 @@ def build_df(portfolio_size):
         batch_api_call_url = f'https://sandbox.iexapis.com/stable/stock/market/batch/?types=stats,quote&symbols={symbol_string}&token={IEX_CLOUD_API_TOKEN}'
         data = requests.get(batch_api_call_url).json()
         for symbol in symbol_string.split(','):
-            hqm_dataframe = hqm_dataframe.append(
-                                            pd.Series([symbol, 
-                                                    data[symbol]['quote']['latestPrice'],
-                                                    'N/A',
-                                                    data[symbol]['stats']['year1ChangePercent'],
-                                                    'N/A',
-                                                    data[symbol]['stats']['month6ChangePercent'],
-                                                    'N/A',
-                                                    data[symbol]['stats']['month3ChangePercent'],
-                                                    'N/A',
-                                                    data[symbol]['stats']['month1ChangePercent'],
-                                                    'N/A',
-                                                    'N/A'
-                                                    ], 
-                                                    index = hqm_columns), 
-                                            ignore_index = True)
+            if not(data.get(symbol) is None):
 
-    time_periods = [
-                    'One-Year',
-                    'Six-Month',
-                    'Three-Month',
-                    'One-Month'
-                    ]
-    for row in hqm_dataframe.index:
+                hqm_dataframe = hqm_dataframe.append(
+                                                pd.Series([symbol, 
+                                                        data[symbol]['quote']['latestPrice'],
+                                                        'N/A',
+                                                        data[symbol]['stats']['year1ChangePercent'],
+                                                        'N/A',
+                                                        data[symbol]['stats']['month6ChangePercent'],
+                                                        'N/A',
+                                                        data[symbol]['stats']['month3ChangePercent'],
+                                                        'N/A',
+                                                        data[symbol]['stats']['month1ChangePercent'],
+                                                        'N/A',
+                                                        'N/A'
+                                                        ], 
+                                                        index = hqm_columns), 
+                                                ignore_index = True)
+
+        time_periods = [
+                        'One-Year',
+                        'Six-Month',
+                        'Three-Month',
+                        'One-Month'
+                        ]
+        for row in hqm_dataframe.index:
+            for time_period in time_periods:
+                if hqm_dataframe.loc[row, f'{time_period} Price Return'] == None:
+                    hqm_dataframe.loc[row, f'{time_period} Price Return'] = 0
+
+        for row in hqm_dataframe.index:
+            for time_period in time_periods:
+                hqm_dataframe.loc[row, f'{time_period} Return Percentile'] = stats.percentileofscore(hqm_dataframe[f'{time_period} Price Return'], hqm_dataframe.loc[row, f'{time_period} Price Return'])/100
+
+
         for time_period in time_periods:
-            if hqm_dataframe.loc[row, f'{time_period} Price Return'] == None:
-                hqm_dataframe.loc[row, f'{time_period} Price Return'] = 0
+            print(hqm_dataframe[f'{time_period} Return Percentile'])
 
-    for row in hqm_dataframe.index:
-        for time_period in time_periods:
-            hqm_dataframe.loc[row, f'{time_period} Return Percentile'] = stats.percentileofscore(hqm_dataframe[f'{time_period} Price Return'], hqm_dataframe.loc[row, f'{time_period} Price Return'])/100
+        for row in hqm_dataframe.index:
+            momentum_percentiles = []
+            for time_period in time_periods:
+                momentum_percentiles.append(hqm_dataframe.loc[row, f'{time_period} Return Percentile'])
+            hqm_dataframe.loc[row, 'HQM Score'] = mean(momentum_percentiles)
 
+        hqm_dataframe.sort_values(by = 'HQM Score', ascending = False)
+        hqm_dataframe = hqm_dataframe[:51]
+        hqm_dataframe.reset_index(drop = True, inplace = True)
 
-    for time_period in time_periods:
-        print(hqm_dataframe[f'{time_period} Return Percentile'])
-
-    for row in hqm_dataframe.index:
-        momentum_percentiles = []
-        for time_period in time_periods:
-            momentum_percentiles.append(hqm_dataframe.loc[row, f'{time_period} Return Percentile'])
-        hqm_dataframe.loc[row, 'HQM Score'] = mean(momentum_percentiles)
-
-    hqm_dataframe.sort_values(by = 'HQM Score', ascending = False)
-    hqm_dataframe = hqm_dataframe[:51]
-    hqm_dataframe.reset_index(drop = True, inplace = True)
-
-    position_size = float(portfolio_size) / len(hqm_dataframe.index)
+        position_size = float(portfolio_size) / len(hqm_dataframe.index)
     for i in range(0, len(hqm_dataframe['Ticker'])-1):
         hqm_dataframe.loc[i, 'Number of Shares to Buy'] = math.floor(position_size / hqm_dataframe['Price'][i])
     
    
-
+    hqm_dataframe = hqm_dataframe.replace(['N/A'], 0)
     return hqm_dataframe
 
         
