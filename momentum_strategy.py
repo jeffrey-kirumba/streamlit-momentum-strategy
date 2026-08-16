@@ -56,9 +56,11 @@ class Momo:
         args = self.chunks(list(allTickers), groups)
         for arg in args:
             self.getCloseData(tickers=arg)
+        print(f"Got all close data")
 
     def getData(self):
         self.getAllCloseData()
+        # print(f"Got all close data")
         for symbol in self.closeData.keys():
             allData = self.closeData[symbol]
             if len(allData) >= 250 :
@@ -89,25 +91,25 @@ class Momo:
                 self.mainFrame.loc[-1] = series
                 self.mainFrame.index+=1
                 self.mainFrame.sort_index()
-
+        print(f"Added all Returns")
        #remove nan values
         for row in self.mainFrame.index:
             price = self.mainFrame.loc[row, 'Price']
             if math.isnan(price):
                 self.mainFrame = self.mainFrame.drop([row], axis=0)
-
+        print(f"Removed nan prices")
         time_periods = ['One-Year', 'Six-Month', 'Three-Month', 'One-Month']
         #remove nan or null return vals
         for row in self.mainFrame.index:
                 for time_period in time_periods:
                     if self.mainFrame.loc[row, f'{time_period} Price Return'] == None or math.isnan(self.mainFrame.loc[row, f'{time_period} Price Return']):
                         self.mainFrame.loc[row, f'{time_period} Price Return'] = 0
-
+        print(f"Replaced nan returns with zero")
         #calc percentiles
         for row in self.mainFrame.index:
             for time_period in time_periods:
                 self.mainFrame.loc[row, f'{time_period} Return Percentile'] = stats.percentileofscore(self.mainFrame[f'{time_period} Price Return'], self.mainFrame.loc[row, f'{time_period} Price Return'])/100
-        
+        print(f"Calculated percentiles")
         #calc, then sort by HQM Score
         for row in self.mainFrame.index:
                 momentum_percentiles = []
@@ -118,7 +120,6 @@ class Momo:
         self.mainFrame =  self.mainFrame[:50]
         self.mainFrame.reset_index(drop = True, inplace = True)
                         
-        print('# of Tickers collected after', len(self.mainFrame.index))
          
     def applyPortfolioValue(self, capital):
         mainFrame = self.mainFrame
@@ -133,9 +134,10 @@ class Momo:
     
 @st.cache_resource(show_spinner=False)
 def buttonPushed():
+    m = Momo()
     with st.spinner('Gathering data'):
         m.getData()
-    st.session_state.displayFrame = m.mainFrame
+        st.session_state.displayFrame = m.mainFrame
     st.session_state.buttonPushed = True
 
           
@@ -148,7 +150,6 @@ image = Image.open('momentum.jpg')
 st.image(image, use_column_width=True)
 
 
-displayFrame = None
 if 'buttonPushed' not in st.session_state:
     st.button(label='Get Started', on_click=buttonPushed)
 
