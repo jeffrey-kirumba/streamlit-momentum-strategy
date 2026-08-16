@@ -135,7 +135,7 @@ class Momo:
 def buttonPushed():
     with st.spinner('Gathering data'):
         m.getData()
-        st.session_state.displayFrame = m.mainFrame
+    st.session_state.displayFrame = m.mainFrame
     st.session_state.buttonPushed = True
 
           
@@ -159,5 +159,7 @@ if 'displayFrame' in st.session_state and not st.session_state.displayFrame.empt
         m.mainFrame = st.session_state.displayFrame
         displayFrame = m.applyPortfolioValue(capital=capital)
     st.table(displayFrame)
+else:
+    st.write(st.session_state)
 
 
