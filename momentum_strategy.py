@@ -42,8 +42,12 @@ class Momo:
     def getCloseData(self, tickers: List[str]):
          tickData = yf.download(tickers=tickers, period="1y")
          for tick in tickers:
-            allCloseData = list(reversed(tickData.loc[:, ('Close', tick)].tolist()))
-            self.closeData[tick] = allCloseData
+            try:
+                allCloseData = list(reversed(tickData.loc[:, ('Close', tick)].tolist()))
+                self.closeData[tick] = allCloseData
+            except:
+                print(f"Error while collecting close data: {tick}")
+                continue
  
     def getAllCloseData(self):
         stocks = pd.read_csv('sp_500_stocks.csv')
