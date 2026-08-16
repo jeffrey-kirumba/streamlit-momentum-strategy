@@ -42,12 +42,8 @@ class Momo:
     def getCloseData(self, tickers: List[str]):
          tickData = yf.download(tickers=tickers, period="1y")
          for tick in tickers:
-            try:
                 allCloseData = list(reversed(tickData.loc[:, ('Close', tick)].tolist()))
                 self.closeData[tick] = allCloseData
-            except:
-                print(f"Error while collecting close data: {tick}")
-                continue
  
     def getAllCloseData(self):
         stocks = pd.read_csv('sp_500_stocks.csv')
@@ -92,18 +88,18 @@ class Momo:
                 self.mainFrame.index+=1
                 self.mainFrame.sort_index()
         print(f"Added all Returns")
-       #remove nan values
-        for row in self.mainFrame.index:
-            price = self.mainFrame.loc[row, 'Price']
-            if math.isnan(price):
-                self.mainFrame = self.mainFrame.drop([row], axis=0)
+        #remove nan values
+        self.mainFrame["Price"] = pd.to_numeric(self.mainFrame["Price"], errors="coerce")
+        self.mainFrame = self.mainFrame.dropna(subset=["Price"])
+
         print(f"Removed nan prices")
         time_periods = ['One-Year', 'Six-Month', 'Three-Month', 'One-Month']
         #remove nan or null return vals
         for row in self.mainFrame.index:
                 for time_period in time_periods:
-                    if self.mainFrame.loc[row, f'{time_period} Price Return'] == None or math.isnan(self.mainFrame.loc[row, f'{time_period} Price Return']):
-                        self.mainFrame.loc[row, f'{time_period} Price Return'] = 0
+                    col = f"{time_period} Price Return"
+                    self.mainFrame[col] = pd.to_numeric(self.mainFrame[col], errors="coerce")
+                    self.mainFrame[col] = self.mainFrame[col].fillna(0)
         print(f"Replaced nan returns with zero")
         #calc percentiles
         for row in self.mainFrame.index:
@@ -132,7 +128,7 @@ class Momo:
         hqm_dataframe = mainFrame.replace(['N/A'], 0)
         return hqm_dataframe
     
-@st.cache_resource(show_spinner=False)
+# @st.cache_resource(show_spinner=False)
 def buttonPushed():
     m = Momo()
     with st.spinner('Gathering data'):
