@@ -69,8 +69,6 @@ class Momo:
             allCloseData = list(reversed(tickData.loc[:, ("Close", tick)].tolist()))
             self.closeData[tick] = allCloseData
 
-        st.write("Downloaded tickers:", len(self.closeData))
-
  
     def getAllCloseData(self):
         stocks = pd.read_csv('sp_500_stocks.csv')
@@ -80,7 +78,6 @@ class Momo:
         for arg in args:
             self.getCloseData(tickers=arg)
         logger.warn(f"Got all close data")
-        st.write(f"Got all close data")
 
     def getData(self):
         self.getAllCloseData()
@@ -115,13 +112,11 @@ class Momo:
                 self.mainFrame.index+=1
                 self.mainFrame.sort_index()
         logger.warn(f"Added all Returns")
-        st.write(f"Added all Returns")
         #remove nan values
         self.mainFrame["Price"] = pd.to_numeric(self.mainFrame["Price"], errors="coerce")
         self.mainFrame = self.mainFrame.dropna(subset=["Price"])
 
         logger.warn(f"Removed nan prices")
-        st.write(f"Removed nan prices")
         time_periods = ['One-Year', 'Six-Month', 'Three-Month', 'One-Month']
         #remove nan or null return vals
         for row in self.mainFrame.index:
@@ -130,26 +125,26 @@ class Momo:
                     self.mainFrame[col] = pd.to_numeric(self.mainFrame[col], errors="coerce")
                     self.mainFrame[col] = self.mainFrame[col].fillna(0)
         logger.warn(f"Replaced nan returns with zero")
-        st.write(f"Replaced nan returns with zero")
         #calc percentiles
         for row in self.mainFrame.index:
             for time_period in time_periods:
                 self.mainFrame.loc[row, f'{time_period} Return Percentile'] = stats.percentileofscore(self.mainFrame[f'{time_period} Price Return'], self.mainFrame.loc[row, f'{time_period} Price Return'])/100
         logger.warn(f"Calculated percentiles")
-        st.write(f"Calculated percentiles")
         #calc, then sort by HQM Score
         for row in self.mainFrame.index:
                 momentum_percentiles = []
                 for time_period in time_periods:
                     momentum_percentiles.append(self.mainFrame.loc[row, f'{time_period} Return Percentile'])
                 self.mainFrame.loc[row, 'HQM Score'] = mean(momentum_percentiles)
+        # self.mainFrame.to_csv("momentum_output.csv", index=False)
         self.mainFrame = self.mainFrame.sort_values(by = 'HQM Score', ascending = False)
         self.mainFrame =  self.mainFrame[:50]
         self.mainFrame.reset_index(drop = True, inplace = True)
                         
          
-    def applyPortfolioValue(self, capital):
-        mainFrame = self.mainFrame
+    def applyPortfolioValue(self, capital, mainFrame: pd.DataFrame):
+        if mainFrame.empty:
+            mainFrame = self.mainFrame
         position_size = float(capital) / len(mainFrame.index)
         for i in range(0, len(mainFrame['Ticker'])-1):
             try:
@@ -176,18 +171,25 @@ st.write(""" ### From there, it will recommended trades for an equal-weight port
 image = Image.open('momentum.jpg')
 st.image(image, use_column_width=True)
 
+#uncomment to run locally
+# if 'buttonPushed' not in st.session_state:
+#     st.button(label='Get Started', on_click=buttonPushed)
 
-if 'buttonPushed' not in st.session_state:
-    st.button(label='Get Started', on_click=buttonPushed)
+# if 'displayFrame' in st.session_state and not st.session_state.displayFrame.empty:
+#     displayFrame = st.session_state.displayFrame
+#     capital = st.number_input('Enter the value of your portfolio')
+#     if capital > 0:
+#         m.mainFrame = st.session_state.displayFrame
+#         displayFrame = m.applyPortfolioValue(capital=capital)
+    # st.table(displayFrame)
 
-if 'displayFrame' in st.session_state and not st.session_state.displayFrame.empty:
-    displayFrame = st.session_state.displayFrame
-    capital = st.number_input('Enter the value of your portfolio')
-    if capital > 0:
-        m.mainFrame = st.session_state.displayFrame
-        displayFrame = m.applyPortfolioValue(capital=capital)
-    st.table(displayFrame)
-else:
-    st.write(st.session_state)
+displayFrame = pd.read_csv('momentum_output.csv')
+displayFrame = displayFrame.sort_values(by = 'HQM Score', ascending = False)
+displayFrame =  displayFrame[:50]
+displayFrame.reset_index(drop = True, inplace = True)
+capital = st.number_input('Enter the value of your portfolio')
+if capital > 0:
+    displayFrame = m.applyPortfolioValue(capital=capital, mainFrame=displayFrame)
+st.table(displayFrame)
 
 
