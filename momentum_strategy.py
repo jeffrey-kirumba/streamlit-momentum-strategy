@@ -166,10 +166,10 @@ def buttonPushed():
 m = Momo()
 displayFrame = None
 st.title('Quantitative Momentum Strategy')
-st.write(""" ### This investing strategy selects 50 stocks from the S&P 500 with the highest price momentum. """)
-st.write(""" ### From there, it will recommended trades for an equal-weight portfolio of these 50 stocks.""")
-image = Image.open('momentum.jpg')
-st.image(image, use_column_width=True)
+st.write(""" ##### This investing strategy selects 50 stocks from the S&P 500 with the highest price momentum. """)
+st.write(""" ##### From there, it will recommended trades for an equal-weight portfolio of these 50 stocks.""")
+# image = Image.open('momentum.jpg')
+# st.image(image, use_column_width=True)
 
 #uncomment to run locally
 # if 'buttonPushed' not in st.session_state:
